@@ -1,27 +1,27 @@
 - hosts:  all
+  vars:
+    download_src_url: https://shibboleth.net/downloads/identity-provider/3.2.1/shibboleth-identity-provider-3.2.1.tar.gz
+    download_dest_dir: /tmp/shib_install
+    install_path: /opt/shibboleth-idp
   environment:
     JAVA_HOME: /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.71-2.b15.el7_2.x86_64/jre
   tasks:
-    - name: Check if installation directory exists
+    - name: Create download directory
       file:
-        path: /tmp/shibboleth
+        path: "{{ download_dest_dir }}"
         state: directory
 
-    - name: Check if Shibboleth is already downloaded
-      stat:
-        path: /tmp/shibboleth/shibboleth-identity-provider-3.2.1
-      register: shib_downloaded
-
-    - name: Download and Unpack tarball
+    - name: Download and unpack tarball
       unarchive:
+        src: "{{ download_src_url }}"
+        dest: "{{ download_dest_dir }}"
         copy: no
-        src: http://shibboleth.net/downloads/identity-provider/3.2.1/shibboleth-identity-provider-3.2.1.tar.gz
-        dest: /tmp/shibboleth
-      when: shib_downloaded.stat.exists != True
+        # Have to use 'splitext | first' twice due to .tar.gz extension
+        creates: "{{ download_dest_dir }}/{{ download_src_url | basename | splitext | first | splitext | first }}"
 
     - name: Check if Shibboleth is already installed
       stat:
-        path: /opt/shibboleth-idp
+        path: "{{ install_path }}"
       register: shib_installed
 
     - name: Install Shibboleth
