@@ -1,0 +1,53 @@
+- hosts:  all
+  environment:
+    JAVA_HOME: /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.71-2.b15.el7_2.x86_64/jre
+  tasks:
+    - name: Check if installation directory exists
+      file:
+        path: /tmp/shibboleth
+        state: directory
+
+    - name: Check if Shibboleth is already downloaded
+      stat:
+        path: /tmp/shibboleth/shibboleth-identity-provider-3.2.1
+      register: shib_downloaded
+
+    - name: Download and Unpack tarball
+      unarchive:
+        copy: no
+        src: http://shibboleth.net/downloads/identity-provider/3.2.1/shibboleth-identity-provider-3.2.1.tar.gz
+        dest: /tmp/shibboleth
+      when: shib_downloaded.stat.exists != True
+
+    - name: Check if Shibboleth is already installed
+      stat:
+        path: /opt/shibboleth-idp
+      register: shib_installed
+
+    - name: Install Shibboleth
+      become: yes
+      expect:
+        timeout: 10
+        command: /tmp/shibboleth/shibboleth-identity-provider-3.2.1/bin/install.sh
+        responses:
+          Source \(Distribution\) Directory(.*): '/tmp/shibboleth/shibboleth-identity-provider-3.2.1'
+          Installation Directory(.*) : '/opt/shibboleth-idp'
+          Hostname(.*) : 'syswiki02.cuny.edu'
+          SAML EntityID(.*) : 'syswiki02.cuny.edu/idp/shibboleth'
+          Attribute Scope(.*) : 'devlogin.cuny.edu'
+          Backchannel PKCS12 Password(.*) : 'testing'
+          Re-enter password(.*) : 'testing'
+          Cookie Encryption Key Password(.*) : 'testing'
+          Re-enter password(.*) : 'testing'
+      when: shib_installed != True
+
+    - name: Add idp.xml to tomcat
+      become: yes
+      blockinfile:
+        dest: /etc/tomcat/Catalina/localhost/idp.xml
+        create: yes
+        block: |
+          <Context docBase="/opt/shibboleth-idp/war/idp.war"
+          privileged="true"
+          antiResourceLocking="false"
+          swallowOutput="true" />
