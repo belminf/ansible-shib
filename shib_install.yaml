@@ -9,6 +9,7 @@
     cookie_password: changeme
     keystore_password: changeme
     entity_id: https://{{ hostname }}/idp/shibboleth
+    tomcat_webapp_dir: /etc/tomcat/Catalina/localhost
   tasks:
 
     - name: Check if Shibboleth is already installed
@@ -56,11 +57,12 @@
       environment:
         JAVA_HOME: /etc/alternatives/jre
  
-    - name: Add idp.xml to tomcat
+    - name: Enable IdP web application
       become: yes
       blockinfile:
-        dest: /etc/tomcat/Catalina/localhost/idp.xml
+        dest: "{{ tomcat_webapp_dir }}/idp.xml"
         create: yes
+        marker: "<!-- {mark} ANSIBLE MANAGED BLOCK -->"
         block: |
           <Context docBase="/opt/shibboleth-idp/war/idp.war"
           privileged="true"
