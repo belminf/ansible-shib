@@ -10,6 +10,8 @@
     keystore_password: changeit
     entity_id: https://{{ hostname }}/idp/shibboleth
     tomcat_webapp_dir: /etc/tomcat/Catalina/localhost
+    jstl_url: https://build.shibboleth.net/nexus/service/local/repositories/thirdparty/content/javax/servlet/jstl/1.2/jstl-1.2.jar
+    jstl_checksum: sha1:74aca283cd4f4b4f3e425f5820cda58f44409547
     JAVA_HOME: /usr/lib/jvm/jre
   tasks:
 
@@ -87,6 +89,24 @@
           antiResourceLocking="false"
           swallowOutput="true" />
 
+    - name: Install IdP status page dependency
+      become: yes
+      get_url:
+        url: "{{ jstl_url }}"
+        checksum: "{{ jstl_checksum }}"
+        dest: "{{ install_path }}/edit-webapp/WEB-INF/lib"
+
+    - name: Rebuild .war file
+      become: yes
+      command: >
+        bin/build.sh
+        -Didp.target.dir="{{ install_path }}"
+      #"
+      args:
+        chdir: "{{ install_path }}"
+      environment:
+        JAVA_HOME: "{{ JAVA_HOME }}"
+
     - name: Fix ownership for Tomcat
       become: yes
       file: path={{ item }} owner=tomcat state=directory recurse=yes
@@ -95,3 +115,4 @@
         - /opt/shibboleth-idp/conf
         - /opt/shibboleth-idp/logs
         - /opt/shibboleth-idp/metadata
+      
