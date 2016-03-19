@@ -68,3 +68,12 @@
           privileged="true"
           antiResourceLocking="false"
           swallowOutput="true" />
+
+    - name: Fix ownership for Tomcat
+      become: yes
+      file: path={{ item }} owner=tomcat state=directory recurse=yes
+      with_items:
+        - /opt/shibboleth-idp/credentials
+        - /opt/shibboleth-idp/conf
+        - /opt/shibboleth-idp/logs
+        - /opt/shibboleth-idp/metadata
