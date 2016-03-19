@@ -3,9 +3,19 @@
     download_src_url: https://shibboleth.net/downloads/identity-provider/3.2.1/shibboleth-identity-provider-3.2.1.tar.gz
     download_dest_dir: /tmp/shib_install
     install_path: /opt/shibboleth-idp
-  environment:
-    JAVA_HOME: /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.71-2.b15.el7_2.x86_64/jre
+    tmp_unpacked_path: "{{ download_dest_dir }}/{{ download_src_url | basename | splitext | first | splitext | first }}"
+    hostname: idp.example.com
+    scope_domain: example.com
+    cookie_password: changeme
+    keystore_password: changeme
+    entity_id: https://{{ hostname }}/idp/shibboleth
   tasks:
+
+    - name: Check if Shibboleth is already installed
+      stat:
+        path: "{{ install_path }}"
+      register: shib_installed
+
     - name: Create download directory
       file:
         path: "{{ download_dest_dir }}"
@@ -17,30 +27,35 @@
         dest: "{{ download_dest_dir }}"
         copy: no
         # Have to use 'splitext | first' twice due to .tar.gz extension
-        creates: "{{ download_dest_dir }}/{{ download_src_url | basename | splitext | first | splitext | first }}"
+        creates: "{{ tmp_unpacked_path }}"
 
-    - name: Check if Shibboleth is already installed
-      stat:
-        path: "{{ install_path }}"
-      register: shib_installed
+    # Fix for entity ID issue: https://issues.shibboleth.net/jira/browse/IDP-859
+    - name: Create propeties file
+      blockinfile:
+        dest: "{{ tmp_unpacked_path }}/install.propeties"
+        create: yes
+        block: |
+          idp.entityID= {{ entity_id }}
 
     - name: Install Shibboleth
       become: yes
-      expect:
-        timeout: 10
-        command: /tmp/shibboleth/shibboleth-identity-provider-3.2.1/bin/install.sh
-        responses:
-          Source \(Distribution\) Directory(.*): '/tmp/shibboleth/shibboleth-identity-provider-3.2.1'
-          Installation Directory(.*) : '/opt/shibboleth-idp'
-          Hostname(.*) : 'syswiki02.cuny.edu'
-          SAML EntityID(.*) : 'syswiki02.cuny.edu/idp/shibboleth'
-          Attribute Scope(.*) : 'devlogin.cuny.edu'
-          Backchannel PKCS12 Password(.*) : 'testing'
-          Re-enter password(.*) : 'testing'
-          Cookie Encryption Key Password(.*) : 'testing'
-          Re-enter password(.*) : 'testing'
-      when: shib_installed != True
-
+      # View parameters in unpacked archive: bin/build.xml
+      command: >
+        bin/install.sh
+        -Didp.src.dir="{{ tmp_unpacked_path }}"
+        -Didp.target.dir="{{ install_path }}"
+        -Didp.host.name="{{ hostname }}"
+        -Didp.scope="{{ scope_domain }}"
+        -Didp.keystore.password="{{ keystore_password }}"
+        -Didp.sealer.password="{{ cookie_password }}"
+        -Didp.merge.properties=install.properties
+      #"
+      args:
+        chdir: "{{ tmp_unpacked_path }}"
+        creates: "{{ install_path }}"
+      environment:
+        JAVA_HOME: /etc/alternatives/jre
+ 
     - name: Add idp.xml to tomcat
       become: yes
       blockinfile:
