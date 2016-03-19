@@ -31,12 +31,21 @@
         creates: "{{ tmp_unpacked_path }}"
 
     # Fix for entity ID issue: https://issues.shibboleth.net/jira/browse/IDP-859
-    - name: Create propeties file
-      blockinfile:
-        dest: "{{ tmp_unpacked_path }}/install.propeties"
+    # Fix for sealer password issue
+    - name: Create install.properties file
+      lineinfile:
+        dest: "{{ tmp_unpacked_path }}/install.properties"
         create: yes
-        block: |
-          idp.entityID= {{ entity_id }}
+        line: "{{ item.key }} = {{ item.value }}"
+      with_items:
+        - key: idp.entityID
+          value: "{{ entity_id }}"
+        - key: idp.additionalProperties
+          value: /conf/ldap.properties, /conf/saml-nameid.properties, /conf/services.properties, /conf/credentials.properties
+        - key: idp.sealer.storePassword
+          value: "{{ sealer_password }}"
+        - key: idp.sealer.keyPassword
+          value: "{{ sealer_password }}"
 
     - name: Install Shibboleth
       become: yes
@@ -55,7 +64,15 @@
         chdir: "{{ tmp_unpacked_path }}"
         creates: "{{ install_path }}"
       environment:
-        JAVA_HOME: /etc/alternatives/jre
+        JAVA_HOME: /usr/lib/jvm/jre
+
+    - name: Create credentials.properties
+      become: yes
+      lineinfile:
+        dest: "{{ install_path }}/conf/credentials.properties"
+        create: yes
+        line: idp.sealer.password = {{ sealer_password }}
+
  
     - name: Enable IdP web application
       become: yes
