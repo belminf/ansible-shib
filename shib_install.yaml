@@ -6,8 +6,8 @@
     tmp_unpacked_path: "{{ download_dest_dir }}/{{ download_src_url | basename | splitext | first | splitext | first }}"
     hostname: idp.example.com
     scope_domain: example.com
-    cookie_password: changeme
-    keystore_password: changeme
+    sealer_password: changeit
+    keystore_password: changeit
     entity_id: https://{{ hostname }}/idp/shibboleth
     tomcat_webapp_dir: /etc/tomcat/Catalina/localhost
   tasks:
@@ -48,7 +48,7 @@
         -Didp.host.name="{{ hostname }}"
         -Didp.scope="{{ scope_domain }}"
         -Didp.keystore.password="{{ keystore_password }}"
-        -Didp.sealer.password="{{ cookie_password }}"
+        -Didp.sealer.password="{{ sealer_password }}"
         -Didp.merge.properties=install.properties
       #"
       args:
