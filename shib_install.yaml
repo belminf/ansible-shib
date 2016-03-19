@@ -10,6 +10,7 @@
     keystore_password: changeit
     entity_id: https://{{ hostname }}/idp/shibboleth
     tomcat_webapp_dir: /etc/tomcat/Catalina/localhost
+    JAVA_HOME: /usr/lib/jvm/jre
   tasks:
 
     - name: Check if Shibboleth is already installed
@@ -64,7 +65,7 @@
         chdir: "{{ tmp_unpacked_path }}"
         creates: "{{ install_path }}"
       environment:
-        JAVA_HOME: /usr/lib/jvm/jre
+        JAVA_HOME: "{{ JAVA_HOME }}"
 
     - name: Create credentials.properties
       become: yes
